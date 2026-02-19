@@ -6,134 +6,142 @@
 <title>Stories Maker 9:16</title>
 
 <style>
-body{
-  margin:0;
-  background:#0b0c10;
-  color:#fff;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
-  text-align:center;
-}
-.wrap{
-  max-width:420px;
-  margin:20px auto;
-  padding:16px;
-}
-textarea{
-  width:100%;
-  height:120px;
-  border-radius:12px;
-  border:none;
-  padding:12px;
-  font-size:16px;
-}
-input[type="file"]{
-  margin:10px 0;
-}
-button{
-  padding:12px 20px;
-  border-radius:12px;
-  border:none;
-  background:#2a6df5;
-  color:#fff;
-  font-size:16px;
-  margin-top:10px;
-  cursor:pointer;
-}
-canvas{
-  width:100%;
-  border-radius:18px;
-  margin-top:16px;
-}
-.small{
-  opacity:.6;
-  font-size:13px;
-  margin-top:10px;
-}
+  :root{--bg:#0b0c10; --panel:#12141a; --text:#e9ecf2; --muted:#9aa3b2; --btn:#2a6df5;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;}
+  .wrap{max-width:440px;margin:18px auto;padding:16px;}
+  .card{background:var(--panel);border:1px solid #232736;border-radius:16px;padding:14px}
+  h2{margin:0 0 10px;font-size:18px;font-weight:800}
+  textarea{width:100%;height:110px;border-radius:12px;border:1px solid #232736;background:#0f1118;color:var(--text);
+    padding:12px;font-size:16px;line-height:1.35;resize:vertical}
+  input[type="file"]{width:100%;margin:10px 0;color:var(--muted)}
+  button{width:100%;padding:12px 14px;border-radius:12px;border:0;background:var(--btn);color:#fff;
+    font-size:16px;font-weight:800;cursor:pointer}
+  canvas{width:100%;border-radius:18px;margin-top:14px;background:#000}
+  .small{opacity:.65;font-size:13px;margin-top:10px;text-align:center}
 </style>
 </head>
 <body>
 
 <div class="wrap">
-  <h2>Stories Generator 9:16</h2>
+  <div class="card">
+    <h2>Stories Generator 9:16</h2>
 
-  <input type="file" id="imageInput" accept="image/*">
-  <textarea id="textInput" placeholder="Введите текст..."></textarea>
-  <button onclick="generate()">Создать</button>
+    <input type="file" id="imageInput" accept="image/*">
+    <textarea id="textInput" placeholder="Введите текст..."></textarea>
+    <button id="btn">Создать</button>
 
-  <canvas id="canvas" width="1080" height="1920"></canvas>
-  <div class="small">Сохранение: долгий тап по картинке</div>
+    <canvas id="canvas" width="1080" height="1920"></canvas>
+    <div class="small">Сохранение: долгий тап по картинке</div>
+  </div>
 </div>
 
 <script>
 const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+const ctx = canvas.getContext("2d", { alpha: false });
+document.getElementById("btn").addEventListener("click", generate);
+
+function wrapTextSmart(ctx, text, maxWidth) {
+  const cleaned = (text || "").trim().replace(/\s+/g, " ");
+  if (!cleaned) return [];
+
+  if (ctx.measureText(cleaned).width <= maxWidth) return [cleaned];
+
+  const words = cleaned.split(" ");
+  const lines = [];
+  let line = "";
+
+  for (const w of words) {
+    const test = line ? (line + " " + w) : w;
+    if (ctx.measureText(test).width <= maxWidth) {
+      line = test;
+    } else {
+      if (line) lines.push(line);
+      line = w;
+    }
+  }
+  if (line) lines.push(line);
+
+  // rebalance: avoid last line being a single short word
+  if (lines.length >= 2) {
+    const last = lines[lines.length - 1];
+    const prev = lines[lines.length - 2];
+    const lastWords = last.split(" ");
+    const prevWords = prev.split(" ");
+
+    if (lastWords.length === 1 && prevWords.length >= 2) {
+      const moved = prevWords[prevWords.length - 1];
+      const newPrev = prevWords.slice(0, -1).join(" ");
+      const newLast = moved + " " + last;
+
+      if (ctx.measureText(newPrev).width <= maxWidth &&
+          ctx.measureText(newLast).width <= maxWidth) {
+        lines[lines.length - 2] = newPrev;
+        lines[lines.length - 1] = newLast;
+      }
+    }
+  }
+
+  return lines;
+}
 
 function generate(){
   const file = document.getElementById("imageInput").files[0];
   const text = document.getElementById("textInput").value;
-
   if(!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e){
+  reader.onload = (e) => {
     const img = new Image();
-    img.onload = function(){
+    img.onload = () => {
+      const W = canvas.width, H = canvas.height;
 
-      const W = canvas.width;
-      const H = canvas.height;
-
+      // cover image
       ctx.clearRect(0,0,W,H);
-
-      // ---- Масштабирование изображения 9:16 ----
       const scale = Math.max(W / img.width, H / img.height);
       const x = (W - img.width * scale) / 2;
       const y = (H - img.height * scale) / 2;
-
       ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
 
-      // ---- Instagram-style градиент ----
-      const gradientHeight = 700;
-      const gradient = ctx.createLinearGradient(0, H - gradientHeight, 0, H);
-      gradient.addColorStop(0, "rgba(0,0,0,0)");
-      gradient.addColorStop(1, "rgba(0,0,0,0.65)");
-
-      ctx.fillStyle = gradient;
+      // soft IG-like bottom gradient
+      const gradientHeight = 760;
+      const g = ctx.createLinearGradient(0, H - gradientHeight, 0, H);
+      g.addColorStop(0.00, "rgba(0,0,0,0.00)");
+      g.addColorStop(0.55, "rgba(0,0,0,0.20)");
+      g.addColorStop(1.00, "rgba(0,0,0,0.55)");
+      ctx.fillStyle = g;
       ctx.fillRect(0, H - gradientHeight, W, gradientHeight);
 
-      // ---- Текст ----
-      const sidePadding = 120;
-      const bottomOffset = 100; // меняй 80-140 если нужно ниже/выше
+      // IG-ish text
+      const sidePadding = 84;   // почти “на всю ширину”, как в IG
+      const bottomOffset = 60;  // ниже
       const maxWidth = W - sidePadding * 2;
 
-      ctx.font = "bold 72px system-ui";
+      ctx.font = "800 70px system-ui,-apple-system,Segoe UI,Roboto,Arial";
       ctx.fillStyle = "#ffffff";
       ctx.textAlign = "left";
+      ctx.textBaseline = "top";
 
-      // перенос строк
-      const words = text.split(" ");
-      let lines = [];
-      let currentLine = "";
+      // subtle shadow like IG
+      ctx.shadowColor = "rgba(0,0,0,0.45)";
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 4;
 
-      for (let word of words){
-        const testLine = currentLine + word + " ";
-        const metrics = ctx.measureText(testLine);
-        if(metrics.width > maxWidth && currentLine !== ""){
-          lines.push(currentLine);
-          currentLine = word + " ";
-        } else {
-          currentLine = testLine;
-        }
-      }
-      lines.push(currentLine);
-
-      const lineHeight = 88;
+      const lines = wrapTextSmart(ctx, text, maxWidth);
+      const lineHeight = 84;
       const blockH = lines.length * lineHeight;
+
       const topY = H - blockH - bottomOffset;
 
-      for(let i=0;i<lines.length;i++){
-        ctx.fillText(lines[i], sidePadding, topY + i*lineHeight);
+      for(let i=0; i<lines.length; i++){
+        ctx.fillText(lines[i], sidePadding, topY + i * lineHeight);
       }
 
+      // reset shadow
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
     };
     img.src = e.target.result;
   };
