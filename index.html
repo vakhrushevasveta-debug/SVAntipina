@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stories Carousel Maker (9:16)</title>
+  <style>
+    :root{
+      --bg:#0b0c10; --panel:#12141a; --stroke:#232736; --text:#e9ecf2;
+      --muted:#9aa3b2; --btn:#2a6df5; --btn2:#222636;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text)}
+    .wrap{max-width:1100px; margin:0 auto; padding:16px}
+    .grid{display:grid; grid-template-columns: 380px 1fr; gap:14px}
+    @media (max-width: 960px){ .grid{grid-template-columns:1fr} }
+    .card{background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:14px}
+    h1{font-size:18px; margin:0 0 10px}
+    label{display:block; font-size:12px; color:var(--muted); margin:10px 0 6px}
+    textarea{width:100%; height:220px; resize:vertical; border-radius:12px; border:1px solid var(--stroke);
+      background:#0f1118; color:var(--text); padding:12px; font-size:14px; line-height:1.35}
+    input[type="text"], input[type="number"], select{
+      width:100%; border-radius:12px; border:1px solid var(--stroke);
+      background:#0f1118; color:var(--text); padding:10px; font-size:14px;
+    }
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    .btnrow{display:flex; gap:10px; margin-top:12px; flex-wrap:wrap}
+    button{
+      border:0; border-radius:12px; padding:10px 12px; font-weight:600; cursor:pointer;
+      color:white; background:var(--btn);
+    }
+    button.secondary{background:var(--btn2); color:var(--text); border:1px solid var(--stroke)}
+    .hint{font-size:12px; color:var(--muted); margin-top:10px; line-height:1.4}
+    .slides{display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:12px}
+    .slide{
+      border:1px solid var(--stroke); border-radius:14px; overflow:hidden; background:#0f1118;
+      display:flex; flex-direction:column;
+    }
+    .slide .topbar{display:flex; justify-content:space-between; align-items:center; padding:10px 10px 8px}
+    .badge{font-size:12px; color:var(--muted)}
+    .miniBtns{display:flex; gap:8px}
+    .miniBtns button{padding:7px 10px; border-radius:10px; font-size:12px}
+    .miniBtns button.secondary{padding:7px 10px}
+    .imgWrap{padding:10px}
+    .imgWrap img{
+      width:100%; height:auto; border-radius:12px; display:block;
+      -webkit-user-select:none; user-select:none;
+    }
+    .foot{padding:0 10px 12px; font-size:12px; color:var(--muted)}
+    a{color:#9fc0ff}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="grid">
+      <div class="card">
+        <h1>Stories Maker (9:16)</h1>
+
+        <label>Текст (каждый абзац = отдельная сторис)</label>
+        <textarea id="text" placeholder="Пример:
+
+Заголовок сторис
+Короткий текст под ним.
+
+Следующая сторис — новый абзац.
+Можно вставлять большой текст, сайт сам нарежет."></textarea>
+
+        <div class="row">
+          <div>
+            <label>Шрифт</label>
+            <select id="font">
+              <option value="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial">Inter/System</option>
+              <option value="Georgia, serif">Georgia</option>
+              <option value="Times New Roman, Times, serif">Times</option>
+              <option value="Arial, Helvetica, sans-serif">Arial</option>
+            </select>
+          </div>
+          <div>
+            <label>Выравнивание</label>
+            <select id="align">
+              <option value="left">Left</option>
+              <option value="center" selected>Center</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Размер текста (px)</label>
+            <input id="fontSize" type="number" value="66" min="24" max="140" />
+          </div>
+          <div>
+            <label>Межстрочный интервал</label>
+            <input id="lineHeight" type="number" value="1.15" step="0.05" min="0.9" max="1.6" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Поля по бокам (px)</label>
+            <input id="sidePad" type="number" value="120" min="40" max="220" />
+          </div>
+          <div>
+            <label>Safe зона сверху/снизу (px)</label>
+            <input id="safePad" type="number" value="280" min="160" max="420" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Цвет текста</label>
+            <input id="textColor" type="text" value="#ffffff" />
+          </div>
+          <div>
+            <label>Подложка текста</label>
+            <select id="pill">
+              <option value="none">Нет</option>
+              <option value="soft" selected>Мягкая (как “тихая роскошь”)</option>
+              <option value="solid">Плотная</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Фон по умолчанию</label>
+            <select id="bg">
+              <option value="warm" selected>Warm neutral</option>
+              <option value="cool">Cool gray</option>
+              <option value="dark">Dark</option>
+              <option value="paper">Paper</option>
+            </select>
+          </div>
+          <div>
+            <label>Зерно/шум</label>
+            <select id="grain">
+              <option value="0">Off</option>
+              <option value="1" selected>On</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="btnrow">
+          <button id="build">Сгенерировать сторис</button>
+          <button class="secondary" id="clear">Очистить</button>
+        </div>
+
+        <div class="hint">
+          ✅ <b>Сохранение:</b> нажми на картинку и удерживай → «Сохранить изображение».<br/>
+          Абзацы разделяй пустой строкой.<br/>
+          Фон можно заменить у каждого слайда кнопкой <b>Фон</b>.
+        </div>
+      </div>
+
+      <div class="card">
+        <h1>Слайды</h1>
+        <div id="slides" class="slides"></div>
+        <div class="hint" style="margin-top:10px">
+          Если хочешь, добавим: “скачать всё”, шаблоны стилей, автоподбор размера текста, градиенты, бренд-пак, и т.п.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <input id="filePicker" type="file" accept="image/*" style="display:none" />
+
+  <script>
+    const W = 1080, H = 1920;
+
+    const el = (id) => document.getElementById(id);
+
+    const state = {
+      backgrounds: new Map(), // slideIndex -> ImageBitmap
+    };
+
+    function splitParagraphs(text){
+      return text
+        .replace(/\r\n/g, "\n")
+        .split(/\n\s*\n+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+    }
+
+    function bgPreset(kind, ctx){
+      // simple gradients
+      const g = ctx.createLinearGradient(0, 0, W, H);
+      if(kind === "warm"){
+        g.addColorStop(0, "#f4efe6");
+        g.addColorStop(0.55, "#e9ded0");
+        g.addColorStop(1, "#cfc4b8");
+      } else if(kind === "cool"){
+        g.addColorStop(0, "#eef1f5");
+        g.addColorStop(0.55, "#d6dde6");
+        g.addColorStop(1, "#b9c3d1");
+      } else if(kind === "dark"){
+        g.addColorStop(0, "#0b0c10");
+        g.addColorStop(0.7, "#12141a");
+        g.addColorStop(1, "#1a1f2d");
+      } else { // paper
+        g.addColorStop(0, "#fbf7ef");
+        g.addColorStop(0.65, "#f2eadf");
+        g.addColorStop(1, "#e6dccf");
+      }
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,W,H);
+    }
+
+    function addGrain(ctx, amount=0.06){
+      // lightweight grain
+      const img = ctx.getImageData(0,0,W,H);
+      const d = img.data;
+      for(let i=0;i<d.length;i+=4){
+        const n = (Math.random()-0.5) * 255 * amount;
+        d[i] = Math.min(255, Math.max(0, d[i] + n));
+        d[i+1] = Math.min(255, Math.max(0, d[i+1] + n));
+        d[i+2] = Math.min(255, Math.max(0, d[i+2] + n));
+      }
+      ctx.putImageData(img,0,0);
+    }
+
+    function wrapLines(ctx, text, maxWidth){
+      const words = text.split(/\s+/);
+      const lines = [];
+      let line = "";
+      for(const w of words){
+        const test = line ? (line + " " + w) : w;
+        if(ctx.measureText(test).width <= maxWidth){
+          line = test;
+        }else{
+          if(line) lines.push(line);
+          line = w;
+        }
+      }
+      if(line) lines.push(line);
+      return lines;
+    }
+
+    function drawRoundedRect(ctx, x, y, w, h, r){
+      const rr = Math.min(r, w/2, h/2);
+      ctx.beginPath();
+      ctx.moveTo(x+rr, y);
+      ctx.arcTo(x+w, y, x+w, y+h, rr);
+      ctx.arcTo(x+w, y+h, x, y+h, rr);
+      ctx.arcTo(x, y+h, x, y, rr);
+      ctx.arcTo(x, y, x+w, y, rr);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function renderSlide(idx, text){
+      const font = el("font").value;
+      const align = el("align").value;
+      const fontSize = Number(el("fontSize").value);
+      const lineHeight = Number(el("lineHeight").value);
+      const sidePad = Number(el("sidePad").value);
+      const safePad = Number(el("safePad").value);
+      const textColor = el("textColor").value.trim() || "#fff";
+      const pill = el("pill").value;
+      const bg = el("bg").value;
+      const grain = el("grain").value === "1";
+
+      const canvas = document.createElement("canvas");
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext("2d");
+
+      // background
+      const customBg = state.backgrounds.get(idx);
+      if(customBg){
+        // cover
+        const iw = customBg.width, ih = customBg.height;
+        const scale = Math.max(W/iw, H/ih);
+        const dw = iw*scale, dh = ih*scale;
+        const dx = (W - dw)/2, dy = (H - dh)/2;
+        ctx.drawImage(customBg, dx, dy, dw, dh);
+      } else {
+        bgPreset(bg, ctx);
+      }
+
+      // subtle darken for readability when photo
+      if(customBg){
+        ctx.fillStyle = "rgba(0,0,0,0.18)";
+        ctx.fillRect(0,0,W,H);
+      }
+
+      if(grain) addGrain(ctx, customBg ? 0.05 : 0.035);
+
+      // text styling
+      ctx.font = `${fontSize}px ${font}`;
+      ctx.fillStyle = textColor;
+      ctx.textBaseline = "top";
+
+      const maxWidth = W - sidePad*2;
+      const lines = wrapLines(ctx, text, maxWidth);
+
+      const lh = fontSize * lineHeight;
+      const blockH = lines.length * lh;
+
+      // vertical center within safe zone
+      const topY = safePad + ( (H - safePad*2) - blockH )/2;
+      let x;
+      if(align === "left") x = sidePad;
+      else if(align === "right") x = W - sidePad;
+      else x = W/2;
+
+      // compute widest line
+      const widths = lines.map(l => ctx.measureText(l).width);
+      const widest = Math.max(...widths, 0);
+
+      // optional pill background behind text block
+      if(pill !== "none"){
+        const padX = 44, padY = 34;
+        const boxW = Math.min(maxWidth, widest + padX*2);
+        const boxH = blockH + padY*2;
+        let boxX;
+        if(align === "left") boxX = sidePad - 18;
+        else if(align === "right") boxX = W - sidePad - boxW + 18;
+        else boxX = (W - boxW)/2;
+        const boxY = topY - padY;
+
+        ctx.save();
+        if(pill === "soft"){
+          ctx.fillStyle = customBg ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.22)";
+        } else {
+          ctx.fillStyle = customBg ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.35)";
+        }
+        drawRoundedRect(ctx, boxX, boxY, boxW, boxH, 48);
+        ctx.restore();
+      }
+
+      // shadow for legibility
+      ctx.save();
+      ctx.shadowColor = customBg ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.25)";
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetY = 6;
+
+      // draw lines
+      let y = topY;
+      for(let i=0;i<lines.length;i++){
+        const line = lines[i];
+        if(align === "left") ctx.textAlign = "left";
+        else if(align === "right") ctx.textAlign = "right";
+        else ctx.textAlign = "center";
+        ctx.fillText(line, x, y);
+        y += lh;
+      }
+      ctx.restore();
+
+      // safe zone hints (invisible; enable if you want debug)
+      // ctx.strokeStyle="rgba(255,0,0,0.25)"; ctx.strokeRect(0,safePad,W,H-safePad*2);
+
+      return canvas;
+    }
+
+    function canvasToPngUrl(canvas){
+      return canvas.toDataURL("image/png");
+    }
+
+    function build(){
+      const paragraphs = splitParagraphs(el("text").value);
+      const slidesEl = el("slides");
+      slidesEl.innerHTML = "";
+
+      if(paragraphs.length === 0){
+        slidesEl.innerHTML = `<div class="hint">Вставь текст слева — каждый абзац будет отдельной сторис.</div>`;
+        return;
+      }
+
+      paragraphs.forEach((p, idx) => {
+        const canvas = renderSlide(idx, p);
+        const url = canvasToPngUrl(canvas);
+
+        const card = document.createElement("div");
+        card.className = "slide";
+
+        const topbar = document.createElement("div");
+        topbar.className = "topbar";
+
+        const badge = document.createElement("div");
+        badge.className = "badge";
+        badge.textContent = `Slide ${idx+1}`;
+
+        const mini = document.createElement("div");
+        mini.className = "miniBtns";
+
+        const btnBg = document.createElement("button");
+        btnBg.className = "secondary";
+        btnBg.textContent = "Фон";
+        btnBg.onclick = () => pickBgFor(idx);
+
+        const btnRerender = document.createElement("button");
+        btnRerender.className = "secondary";
+        btnRerender.textContent = "Обновить";
+        btnRerender.onclick = () => build();
+
+        mini.appendChild(btnBg);
+        mini.appendChild(btnRerender);
+
+        topbar.appendChild(badge);
+        topbar.appendChild(mini);
+
+        const imgWrap = document.createElement("div");
+        imgWrap.className = "imgWrap";
+
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = `Slide ${idx+1}`;
+
+        // Helpful note for iOS: long press
+        img.title = "Удерживай для сохранения";
+
+        imgWrap.appendChild(img);
+
+        const foot = document.createElement("div");
+        foot.className = "foot";
+        foot.textContent = "Сохранение: долгий тап по картинке";
+
+        card.appendChild(topbar);
+        card.appendChild(imgWrap);
+        card.appendChild(foot);
+
+        slidesEl.appendChild(card);
+      });
+    }
+
+    function pickBgFor(idx){
+      const picker = el("filePicker");
+      picker.onchange = async (e) => {
+        const file = e.target.files?.[0];
+        if(!file) return;
+
+        const img = await fileToImageBitmap(file);
+        state.backgrounds.set(idx, img);
+        picker.value = "";
+        build();
+      };
+      picker.click();
+    }
+
+    async function fileToImageBitmap(file){
+      // ImageBitmap is fast; fallback to HTMLImageElement if needed
+      if("createImageBitmap" in window){
+        return await createImageBitmap(file);
+      }
+      return await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    el("build").addEventListener("click", build);
+    el("clear").addEventListener("click", () => {
+      el("text").value = "";
+      state.backgrounds.clear();
+      el("slides").innerHTML = "";
+    });
+
+    // auto build on any settings change
+    ["font","align","fontSize","lineHeight","sidePad","safePad","textColor","pill","bg","grain"]
+      .forEach(id => el(id).addEventListener("change", () => build()));
+
+    // first render hint
+    el("slides").innerHTML = `<div class="hint">Вставь текст слева и нажми “Сгенерировать сторис”.</div>`;
+  </script>
+</body>
+</html>
