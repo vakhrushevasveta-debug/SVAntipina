@@ -297,8 +297,8 @@
       const blockH = lines.length * lh;
 
       // vertical center within safe zone
-      const topY = safePad + ( (H - safePad*2) - blockH )/2;
-      let x;
+      const bottomMargin = 260; 
+const topY = H - safePad - blockH - bottomMargin;
       if(align === "left") x = sidePad;
       else if(align === "right") x = W - sidePad;
       else x = W/2;
