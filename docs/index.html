@@ -1,22 +1,81 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Stories Maker 9:16</title>
 
 <style>
-  :root{--bg:#0b0c10; --panel:#12141a; --text:#e9ecf2; --muted:#9aa3b2; --btn:#2a6df5;}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;}
-  .wrap{max-width:440px;margin:18px auto;padding:16px;}
-  .card{background:var(--panel);border:1px solid #232736;border-radius:16px;padding:14px}
+  :root{
+    --bg:#0b0c10;
+    --panel:#12141a;
+    --stroke:#232736;
+    --text:#e9ecf2;
+    --muted:#9aa3b2;
+    --btn:#2a6df5;
+  }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  }
+  .wrap{max-width:460px;margin:18px auto;padding:16px;}
+  .card{
+    background:var(--panel);
+    border:1px solid var(--stroke);
+    border-radius:16px;
+    padding:14px;
+  }
   h2{margin:0 0 10px;font-size:18px;font-weight:800}
-  textarea{width:100%;height:110px;border-radius:12px;border:1px solid #232736;background:#0f1118;color:var(--text);
-    padding:12px;font-size:16px;line-height:1.35;resize:vertical}
-  input[type="file"]{width:100%;margin:10px 0;color:var(--muted)}
-  button{width:100%;padding:12px 14px;border-radius:12px;border:0;background:var(--btn);color:#fff;
-    font-size:16px;font-weight:800;cursor:pointer}
-  canvas{width:100%;border-radius:18px;margin-top:14px;background:#000}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
+  input[type="file"]{width:100%;color:var(--muted)}
+  textarea{
+    width:100%;
+    height:110px;
+    border-radius:12px;
+    border:1px solid var(--stroke);
+    background:#0f1118;
+    color:var(--text);
+    padding:12px;
+    font-size:16px;
+    line-height:1.35;
+    resize:vertical;
+    box-sizing:border-box;
+  }
+  select{
+    width:100%;
+    border-radius:12px;
+    border:1px solid var(--stroke);
+    background:#0f1118;
+    color:var(--text);
+    padding:10px 12px;
+    font-size:16px;
+    box-sizing:border-box;
+  }
+  button{
+    width:100%;
+    padding:12px 14px;
+    border-radius:12px;
+    border:0;
+    background:var(--btn);
+    color:#fff;
+    font-size:16px;
+    font-weight:800;
+    cursor:pointer;
+    margin-top:12px;
+  }
+
+  /* Мы генерируем в canvas, но показываем img (чтобы iOS давал "Сохранить в Фото") */
+  canvas{display:none;}
+  #resultImg{
+    width:100%;
+    border-radius:18px;
+    margin-top:14px;
+    display:none;
+    background:#000;
+    -webkit-touch-callout: default; /* важно для iOS */
+  }
   .small{opacity:.65;font-size:13px;margin-top:10px;text-align:center}
 </style>
 </head>
@@ -26,24 +85,38 @@
   <div class="card">
     <h2>Stories Generator 9:16</h2>
 
-    <input type="file" id="imageInput" accept="image/*">
+    <label>Фото</label>
+    <input type="file" id="imageInput" accept="image/*" />
+
+    <label>Текст</label>
     <textarea id="textInput" placeholder="Введите текст..."></textarea>
+
+    <label>Положение текста</label>
+    <select id="textPosition">
+      <option value="bottom" selected>Снизу</option>
+      <option value="top">Сверху</option>
+    </select>
+
     <button id="btn">Создать</button>
 
     <canvas id="canvas" width="1080" height="1920"></canvas>
-    <div class="small">Сохранение: долгий тап по картинке</div>
+    <img id="resultImg" alt="result" />
+
+    <div class="small">Сохранение: долгий тап по картинке → «Сохранить в Фото»</div>
   </div>
 </div>
 
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d", { alpha: false });
+
 document.getElementById("btn").addEventListener("click", generate);
 
 function wrapTextSmart(ctx, text, maxWidth) {
   const cleaned = (text || "").trim().replace(/\s+/g, " ");
   if (!cleaned) return [];
 
+  // если помещается в одну строку — оставляем одну
   if (ctx.measureText(cleaned).width <= maxWidth) return [cleaned];
 
   const words = cleaned.split(" ");
@@ -61,10 +134,11 @@ function wrapTextSmart(ctx, text, maxWidth) {
   }
   if (line) lines.push(line);
 
-  // rebalance: avoid last line being a single short word
+  // попытка убрать "одинокое" слово в последней строке
   if (lines.length >= 2) {
     const last = lines[lines.length - 1];
     const prev = lines[lines.length - 2];
+
     const lastWords = last.split(" ");
     const prevWords = prev.split(" ");
 
@@ -84,36 +158,66 @@ function wrapTextSmart(ctx, text, maxWidth) {
   return lines;
 }
 
-function generate(){
+function drawBottomGradient(W, H) {
+  // мягкий IG-like градиент снизу
+  const gradientHeight = 760;
+  const g = ctx.createLinearGradient(0, H - gradientHeight, 0, H);
+  g.addColorStop(0.00, "rgba(0,0,0,0.00)");
+  g.addColorStop(0.55, "rgba(0,0,0,0.20)");
+  g.addColorStop(1.00, "rgba(0,0,0,0.55)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, H - gradientHeight, W, gradientHeight);
+}
+
+function drawTopGradient(W, H) {
+  // лёгкий градиент сверху (чтобы текст сверху читался, но не затемнял сильно)
+  const gradientHeight = 520;
+  const g = ctx.createLinearGradient(0, 0, 0, gradientHeight);
+  g.addColorStop(0.00, "rgba(0,0,0,0.45)");
+  g.addColorStop(0.60, "rgba(0,0,0,0.12)");
+  g.addColorStop(1.00, "rgba(0,0,0,0.00)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, gradientHeight);
+}
+
+function exportToImage() {
+  const resultImg = document.getElementById("resultImg");
+
+  // JPEG лучше для фото + меньше вес
+  resultImg.src = canvas.toDataURL("image/jpeg", 0.95);
+
+  // показать картинку, canvas скрыт
+  resultImg.style.display = "block";
+
+  // чтобы iOS точно показывал меню по долгому тапу
+  resultImg.setAttribute("draggable", "false");
+  resultImg.style.webkitTouchCallout = "default";
+}
+
+function generate() {
   const file = document.getElementById("imageInput").files[0];
   const text = document.getElementById("textInput").value;
-  if(!file) return;
+  const position = document.getElementById("textPosition").value;
+
+  if (!file) return;
 
   const reader = new FileReader();
   reader.onload = (e) => {
     const img = new Image();
     img.onload = () => {
-      const W = canvas.width, H = canvas.height;
+      const W = canvas.width;
+      const H = canvas.height;
 
-      // cover image
-      ctx.clearRect(0,0,W,H);
+      // 1) Рисуем фото "cover" под 9:16
+      ctx.clearRect(0, 0, W, H);
+
       const scale = Math.max(W / img.width, H / img.height);
       const x = (W - img.width * scale) / 2;
       const y = (H - img.height * scale) / 2;
       ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
 
-      // soft IG-like bottom gradient
-      const gradientHeight = 760;
-      const g = ctx.createLinearGradient(0, H - gradientHeight, 0, H);
-      g.addColorStop(0.00, "rgba(0,0,0,0.00)");
-      g.addColorStop(0.55, "rgba(0,0,0,0.20)");
-      g.addColorStop(1.00, "rgba(0,0,0,0.55)");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, H - gradientHeight, W, gradientHeight);
-
-      // IG-ish text
-      const sidePadding = 84;   // почти “на всю ширину”, как в IG
-      const bottomOffset = 60;  // ниже
+      // 2) Настройки текста (среднее как в IG: широкие строки, крупный шрифт)
+      const sidePadding = 84; // меньше = шире строка
       const maxWidth = W - sidePadding * 2;
 
       ctx.font = "800 70px system-ui,-apple-system,Segoe UI,Roboto,Arial";
@@ -121,7 +225,7 @@ function generate(){
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
 
-      // subtle shadow like IG
+      // тень как в IG
       ctx.shadowColor = "rgba(0,0,0,0.45)";
       ctx.shadowBlur = 18;
       ctx.shadowOffsetX = 0;
@@ -131,20 +235,41 @@ function generate(){
       const lineHeight = 84;
       const blockH = lines.length * lineHeight;
 
-      const topY = H - blockH - bottomOffset;
+      // 3) Градиент в зависимости от позиции текста
+      if (position === "bottom") {
+        drawBottomGradient(W, H);
+      } else {
+        drawTopGradient(W, H);
+      }
 
-      for(let i=0; i<lines.length; i++){
+      // 4) Позиция текста
+      let topY;
+      if (position === "bottom") {
+        const bottomOffset = 80; // чуть выше, чем "в самый низ" (меняй 60–120)
+        topY = H - blockH - bottomOffset;
+      } else {
+        const topOffset = 120; // отступ сверху (меняй 90–160)
+        topY = topOffset;
+      }
+
+      // 5) Рисуем текст
+      for (let i = 0; i < lines.length; i++) {
         ctx.fillText(lines[i], sidePadding, topY + i * lineHeight);
       }
 
-      // reset shadow
+      // сброс тени
       ctx.shadowColor = "transparent";
       ctx.shadowBlur = 0;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
+
+      // 6) Экспортируем в IMG для "Сохранить в Фото" по долгому тапу
+      exportToImage();
     };
+
     img.src = e.target.result;
   };
+
   reader.readAsDataURL(file);
 }
 </script>
