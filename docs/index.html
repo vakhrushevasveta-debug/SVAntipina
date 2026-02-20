@@ -77,8 +77,8 @@
           </div>
           <div>
             <label>Отступ от края</label>
-            <input id="margin" type="range" min="80" max="420" value="240" />
-            <div class="small" id="marginVal">240 px</div>
+            <input id="margin" type="range" min="120" max="520" value="300" />
+            <div class="small" id="marginVal">300 px</div>
           </div>
         </div>
 
@@ -90,8 +90,8 @@
           </div>
           <div>
             <label>Сила тени текста</label>
-            <input id="shadow" type="range" min="25" max="90" value="60" />
-            <div class="small" id="shadowVal">60%</div>
+            <input id="shadow" type="range" min="30" max="100" value="85" />
+            <div class="small" id="shadowVal">85%</div>
           </div>
         </div>
 
@@ -196,7 +196,7 @@
     }
 
     function fitText(text, boxW, boxH, fontFamily, weight){
-      const min = 18, max = 76;
+      const min = 18, max = 78;
       let lo = min, hi = max, best = null;
       for(let i=0;i<14;i++){
         const mid = Math.floor((lo+hi)/2);
@@ -219,6 +219,42 @@
       return best;
     }
 
+    // ✅ Instagram-like тень: НЕ обводка, а 2 слоя тени
+    function drawTextIG(line, x, y, shadowPower){
+      // shadowPower 0..1
+      const glowAlpha = 0.35 + 0.35*shadowPower;     // 0.35..0.70
+      const hardAlpha = 0.22 + 0.28*shadowPower;     // 0.22..0.50
+
+      // 1) мягкий glow
+      ctx.save();
+      ctx.fillStyle = `rgba(0,0,0,${glowAlpha})`;
+      ctx.shadowColor = `rgba(0,0,0,${glowAlpha})`;
+      ctx.shadowBlur = 26;          // сильнее, чтобы точно было видно
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 6;
+      ctx.fillText(line, x, y);
+      ctx.restore();
+
+      // 2) плотная читаемая тень (несколько смещений) — это НЕ stroke
+      ctx.save();
+      ctx.fillStyle = `rgba(0,0,0,${hardAlpha})`;
+      const offs = [
+        [0, 4],[0, 3],[0, 2],
+        [1, 3],[-1, 3],
+        [1, 2],[-1, 2]
+      ];
+      for(const [ox,oy] of offs){
+        ctx.fillText(line, x+ox, y+oy);
+      }
+      ctx.restore();
+
+      // 3) основной белый текст
+      ctx.save();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(line, x, y);
+      ctx.restore();
+    }
+
     function enableButtonIfReady(){
       btn.disabled = !fileEl.files?.[0];
     }
@@ -238,7 +274,7 @@
         const position = posEl.value;
         const margin = parseInt(marginEl.value, 10);
         const maxFrac = parseInt(maxFracEl.value, 10) / 100;
-        const shadow = parseInt(shadowEl.value, 10) / 100;
+        const shadowPower = parseInt(shadowEl.value, 10) / 100;
 
         btn.disabled = true;
         setStatus("Генерирую…");
@@ -248,13 +284,13 @@
         const W = canvas.width, H = canvas.height;
         ctx.clearRect(0,0,W,H);
 
-        // фон: только фото, без затемнения/плашек
+        // фон: только фото
         drawCover(img, W, H);
 
         if(rawText){
           const padX = 72;
           const boxW = W - padX*2;
-          const boxH = Math.floor(H * maxFrac); // <= 1/3
+          const boxH = Math.floor(H * maxFrac); // <= 1/3 кадра
 
           const fontFamily = `system-ui, -apple-system, "SF Pro Display", "SF Pro Text", Arial`;
           const weight = 800;
@@ -270,22 +306,14 @@
             yTop = clamp(yTop, 24, H - 24 - fit.height);
           }
 
-          // текст: белый + мягкая тень, БЕЗ обводки
           ctx.save();
           ctx.font = fit.font;
           ctx.textAlign = "left";
           ctx.textBaseline = "top";
-          ctx.fillStyle = "#ffffff";
-
-          // тень как в сторис: мягкая, но читаемая
-          ctx.shadowColor = `rgba(0,0,0,${0.75 * shadow})`;
-          ctx.shadowBlur = 14;
-          ctx.shadowOffsetY = 3;
-          ctx.shadowOffsetX = 0;
 
           let y = yTop;
           for(const line of fit.lines){
-            ctx.fillText(line, padX, y);
+            drawTextIG(line, padX, y, shadowPower);
             y += fit.lineHeight;
           }
           ctx.restore();
