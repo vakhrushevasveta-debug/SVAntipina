@@ -291,10 +291,21 @@ function generate(){
       // 5) Позиция текста (внутри 1/3)
       let topY;
       if (position === "bottom") {
-        // блок должен сидеть внизу, но внутри ограниченной зоны
-        // bottomOffset — отступ от низа (меньше -> ниже)
-        const bottomOffset = 240;
-        topY = H - (fit.lines.length * fit.lineHeight) - bottomOffset;
+  // Отступ от низа — ВОТ ЭТО двигает текст вверх/вниз
+  const bottomOffset = 240; // попробуй 240–320
+
+  // просто считаем Y без "зажима" в нижней трети
+  topY = H - (fit.lines.length * fit.lineHeight) - bottomOffset;
+
+  // защита, чтобы текст не вылез наверх
+  topY = Math.max(24, topY);
+} else {
+  const topOffset = 120;
+  topY = topOffset;
+
+  const maxTop = maxTextHeight - (fit.lines.length * fit.lineHeight);
+  if (topY > maxTop) topY = Math.max(24, maxTop);
+}
 
         // гарантируем, что не улетит выше чем 2/3 кадра
         const minTop = H - maxTextHeight;
