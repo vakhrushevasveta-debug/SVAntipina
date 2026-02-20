@@ -66,15 +66,14 @@
     margin-top:12px;
   }
 
-  /* Мы генерируем в canvas, но показываем img (чтобы iOS давал "Сохранить в Фото") */
-  canvas{display:none;}
+  canvas{display:none;} /* рисуем в canvas, показываем img */
   #resultImg{
     width:100%;
     border-radius:18px;
     margin-top:14px;
     display:none;
     background:#000;
-    -webkit-touch-callout: default; /* важно для iOS */
+    -webkit-touch-callout: default;
   }
   .small{opacity:.65;font-size:13px;margin-top:10px;text-align:center}
 </style>
@@ -109,14 +108,12 @@
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d", { alpha: false });
-
 document.getElementById("btn").addEventListener("click", generate);
 
 function wrapTextSmart(ctx, text, maxWidth) {
   const cleaned = (text || "").trim().replace(/\s+/g, " ");
   if (!cleaned) return [];
 
-  // если помещается в одну строку — оставляем одну
   if (ctx.measureText(cleaned).width <= maxWidth) return [cleaned];
 
   const words = cleaned.split(" ");
@@ -125,24 +122,18 @@ function wrapTextSmart(ctx, text, maxWidth) {
 
   for (const w of words) {
     const test = line ? (line + " " + w) : w;
-    if (ctx.measureText(test).width <= maxWidth) {
-      line = test;
-    } else {
-      if (line) lines.push(line);
-      line = w;
-    }
+    if (ctx.measureText(test).width <= maxWidth) line = test;
+    else { if (line) lines.push(line); line = w; }
   }
   if (line) lines.push(line);
 
-  // попытка убрать "одинокое" слово в последней строке
+  // убрать "одинокое" слово в последней строке
   if (lines.length >= 2) {
     const last = lines[lines.length - 1];
     const prev = lines[lines.length - 2];
 
-    const lastWords = last.split(" ");
-    const prevWords = prev.split(" ");
-
-    if (lastWords.length === 1 && prevWords.length >= 2) {
+    if (last.split(" ").length === 1 && prev.split(" ").length >= 2) {
+      const prevWords = prev.split(" ");
       const moved = prevWords[prevWords.length - 1];
       const newPrev = prevWords.slice(0, -1).join(" ");
       const newLast = moved + " " + last;
@@ -154,27 +145,24 @@ function wrapTextSmart(ctx, text, maxWidth) {
       }
     }
   }
-
   return lines;
 }
 
 function drawBottomGradient(W, H) {
-  // мягкий IG-like градиент снизу
   const gradientHeight = 760;
   const g = ctx.createLinearGradient(0, H - gradientHeight, 0, H);
   g.addColorStop(0.00, "rgba(0,0,0,0.00)");
-  g.addColorStop(0.55, "rgba(0,0,0,0.20)");
-  g.addColorStop(1.00, "rgba(0,0,0,0.55)");
+  g.addColorStop(0.55, "rgba(0,0,0,0.18)");
+  g.addColorStop(1.00, "rgba(0,0,0,0.60)");
   ctx.fillStyle = g;
   ctx.fillRect(0, H - gradientHeight, W, gradientHeight);
 }
 
 function drawTopGradient(W, H) {
-  // лёгкий градиент сверху (чтобы текст сверху читался, но не затемнял сильно)
   const gradientHeight = 520;
   const g = ctx.createLinearGradient(0, 0, 0, gradientHeight);
-  g.addColorStop(0.00, "rgba(0,0,0,0.45)");
-  g.addColorStop(0.60, "rgba(0,0,0,0.12)");
+  g.addColorStop(0.00, "rgba(0,0,0,0.55)");
+  g.addColorStop(0.55, "rgba(0,0,0,0.18)");
   g.addColorStop(1.00, "rgba(0,0,0,0.00)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, gradientHeight);
@@ -182,94 +170,94 @@ function drawTopGradient(W, H) {
 
 function exportToImage() {
   const resultImg = document.getElementById("resultImg");
-
-  // JPEG лучше для фото + меньше вес
   resultImg.src = canvas.toDataURL("image/jpeg", 0.95);
-
-  // показать картинку, canvas скрыт
   resultImg.style.display = "block";
-
-  // чтобы iOS точно показывал меню по долгому тапу
   resultImg.setAttribute("draggable", "false");
   resultImg.style.webkitTouchCallout = "default";
+}
+
+function setTextStyle() {
+  // ВАЖНО: выставляем стиль ПОСЛЕ градиента, иначе fillStyle перезапишется
+  ctx.font = "800 70px system-ui,-apple-system,Segoe UI,Roboto,Arial";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+
+  // белый текст
+  ctx.fillStyle = "#ffffff";
+
+  // тень как в IG
+  ctx.shadowColor = "rgba(0,0,0,0.55)";
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 6;
+
+  // лёгкая обводка (очень помогает читаемости)
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "rgba(0,0,0,0.35)";
+}
+
+function resetEffects() {
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
 }
 
 function generate() {
   const file = document.getElementById("imageInput").files[0];
   const text = document.getElementById("textInput").value;
   const position = document.getElementById("textPosition").value;
-
   if (!file) return;
 
   const reader = new FileReader();
   reader.onload = (e) => {
     const img = new Image();
     img.onload = () => {
-      const W = canvas.width;
-      const H = canvas.height;
+      const W = canvas.width, H = canvas.height;
 
-      // 1) Рисуем фото "cover" под 9:16
+      // 1) Фото
       ctx.clearRect(0, 0, W, H);
-
       const scale = Math.max(W / img.width, H / img.height);
       const x = (W - img.width * scale) / 2;
       const y = (H - img.height * scale) / 2;
       ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
 
-      // 2) Настройки текста (среднее как в IG: широкие строки, крупный шрифт)
-      const sidePadding = 84; // меньше = шире строка
+      // 2) Градиент (сначала!)
+      if (position === "bottom") drawBottomGradient(W, H);
+      else drawTopGradient(W, H);
+
+      // 3) Стиль текста (после градиента!)
+      setTextStyle();
+
+      // 4) Ширина и переносы
+      const sidePadding = 84;
       const maxWidth = W - sidePadding * 2;
-
-      ctx.font = "800 70px system-ui,-apple-system,Segoe UI,Roboto,Arial";
-      ctx.fillStyle = "#ffffff";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
-
-      // тень как в IG
-      ctx.shadowColor = "rgba(0,0,0,0.45)";
-      ctx.shadowBlur = 18;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 4;
-
       const lines = wrapTextSmart(ctx, text, maxWidth);
       const lineHeight = 84;
       const blockH = lines.length * lineHeight;
 
-      // 3) Градиент в зависимости от позиции текста
-      if (position === "bottom") {
-        drawBottomGradient(W, H);
-      } else {
-        drawTopGradient(W, H);
-      }
-
-      // 4) Позиция текста
+      // 5) Позиция текста
       let topY;
       if (position === "bottom") {
-        const bottomOffset = 80; // чуть выше, чем "в самый низ" (меняй 60–120)
+        const bottomOffset = 120; // ВЫШЕ/НИЖЕ: 90 ниже, 140 выше
         topY = H - blockH - bottomOffset;
       } else {
-        const topOffset = 120; // отступ сверху (меняй 90–160)
+        const topOffset = 120;
         topY = topOffset;
       }
 
-      // 5) Рисуем текст
+      // 6) Рисуем: сначала обводка, потом белая заливка (IG-приём)
       for (let i = 0; i < lines.length; i++) {
-        ctx.fillText(lines[i], sidePadding, topY + i * lineHeight);
+        const yy = topY + i * lineHeight;
+        ctx.strokeText(lines[i], sidePadding, yy);
+        ctx.fillText(lines[i], sidePadding, yy);
       }
 
-      // сброс тени
-      ctx.shadowColor = "transparent";
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
-
-      // 6) Экспортируем в IMG для "Сохранить в Фото" по долгому тапу
+      resetEffects();
       exportToImage();
     };
-
     img.src = e.target.result;
   };
-
   reader.readAsDataURL(file);
 }
 </script>
